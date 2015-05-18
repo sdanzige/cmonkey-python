@@ -33,20 +33,20 @@ class RsatFiles:
     def get_rsat_featureName(self):
         return self.featureName
 
-    def get_features(self, organism, original=True):
+    def get_features(self, organism, feature_name, original=True):
         if original:
             #path = os.path.join(self.dirname, 'features.tab')
-            path = os.path.join(self.dirname, self.feature_name + '.tab')
+            path = os.path.join(self.dirname, feature_name + '.tab')
         else:
-            path = os.path.join(self.dirname, organism + '_' + self.feature_name)
+            path = os.path.join(self.dirname, organism + '_' + feature_name)
         with open(path) as infile:
             return infile.read()
 
-    def get_feature_names(self, organism, original=True):
+    def get_feature_names(self, organism, feature_name, original=True):
         if original:
-            path = os.path.join(self.dirname, self.feature_name + '_names.tab')
+            path = os.path.join(self.dirname, feature_name + '_names.tab')
         else:
-            path = os.path.join(self.dirname, organism + '_' + self.feature_name + '_names')
+            path = os.path.join(self.dirname, organism + '_' + feature_name + '_names')
         with open(path) as infile:
             return infile.read()
 
@@ -68,16 +68,16 @@ class RsatDatabase:
     #FEATURE_PATH = 'genome/feature.tab'
     #FEATURE_NAMES_PATH = 'genome/feature_names.tab'
 
-    def __init__(self, base_url, cache_dir, kegg_species, ncbi_code, feature_name='feature'):
+    def __init__(self, base_url, cache_dir, kegg_species, ncbi_code, feature_names='feature'):
     
         """create an RsatDatabase instance based on a mirror URL"""
         self.base_url = base_url
         self.cache_dir = cache_dir.rstrip('/')
         self.kegg_species = kegg_species
         self.ncbi_code = ncbi_code
-        self.feature_name = feature_name
-        self.feature_path = 'genome/' + feature_name + '.tab'
-        self.feature_names_path = 'genome/' + feature_name + '_names.tab'
+        self.feature_names = feature_names.split(',')
+        self.feature_paths = ['genome/' + feature_name + '.tab' for feature_name in self.feature_names]
+        self.feature_names_paths = ['genome/' + feature_name + '_names.tab' for feature_name in self.feature_names]
         
     def __get_ncbi_code(self, rsat_organism):
         """retrieve NCBI code from organism.tab file"""
@@ -139,65 +139,75 @@ class RsatDatabase:
         if that fails
         """
         logging.debug('RSAT - get_features(%s)', organism)
-        cache_file = "/".join([self.cache_dir, organism + '_' + self.feature_name])
-        uCache = util.read_url_cached("/".join([self.base_url, RsatDatabase.DIR_PATH, organism, self.feature_path]), cache_file)
-
-        #Make sure that the fields are in the correct order
-        #Later parts assume that the features file will have the following columns
-        fieldOrder = ['id', 'type', 'name', 'contig', 'start_pos', 'end_pos', 'strand']
-
-        uCache = uCache.split('\n')
-        #Remove any blank lines
-        while "" in uCache:
-            uCache.remove("")
-
-        idxs = {} #Dictionary to store field idxs
-        targIdx = [] #The ordered list of columns for output
-        outString = "" #This will be the new data
-        for line in uCache:
-            try:
-                line = line + '\n'
-            except:
-                continue
         
-            lineParts = line.split()        
-            if lineParts[0] == '--':
-                if lineParts[1] == 'field':
-                        idxs[lineParts[3]] = lineParts[2]
-                        if lineParts[3] in fieldOrder:
-                                newIdx = str(fieldOrder.index(lineParts[3]) + 1)
-                                outString = outString + lineParts[0] + " " + lineParts[1] + " " + newIdx + '\t' + lineParts[3] + '\n'
-                else:
-                        outString = outString + line
-            else:
-                lineParts = line.strip().split('\t')
-                if len(lineParts) == 1:
-                    lineParts = line.split()
-            
-                if (len(targIdx) == 0):
-                        #Create the targIdx
-                        for curField in fieldOrder:
-                                targIdx.append(int(idxs[curField])-1)
-                outline = ""
-                lineParts = line.split('\t')  #Resplit to fix empty fields
-                for curTarg in targIdx:
-                        outline = outline + lineParts[curTarg].strip() + '\t'
-                #Some RSAT files have a contig with ':'s instead of '_'s
-                outline = outline.replace(':','_')
-                #Now strip trailing \t
-                outline = ''.join(outline.rsplit('\t', 1))
-                outString = outString + outline + '\n'
+        outString = "" #This will be the new data
+        for feature_name in self.feature_names:
+            cache_file = "/".join([self.cache_dir, organism + '_' + feature_name])
+            uCache = util.read_url_cached("/".join([self.base_url, RsatDatabase.DIR_PATH, organism, self.feature_path]), cache_file)
 
+            #Make sure that the fields are in the correct order
+            #Later parts assume that the features file will have the following columns
+            fieldOrder = ['id', 'type', 'name', 'contig', 'start_pos', 'end_pos', 'strand']
+
+            uCache = uCache.split('\n')
+            #Remove any blank lines
+            while "" in uCache:
+                uCache.remove("")
+
+            idxs = {} #Dictionary to store field idxs
+            targIdx = [] #The ordered list of columns for output
+            for line in uCache:
+                try:
+                    line = line + '\n'
+                except:
+                    continue
+
+                lineParts = line.split()        
+                if lineParts[0] == '--':
+                    if lineParts[1] == 'field':
+                            idxs[lineParts[3]] = lineParts[2]
+                            if lineParts[3] in fieldOrder:
+                                    newIdx = str(fieldOrder.index(lineParts[3]) + 1)
+                                    outString = outString + lineParts[0] + " " + lineParts[1] + " " + newIdx + '\t' + lineParts[3] + '\n'
+                    else:
+                            outString = outString + line
+                else:
+                    lineParts = line.strip().split('\t')
+                    if len(lineParts) == 1:
+                        lineParts = line.split()
+
+                    if (len(targIdx) == 0):
+                            #Create the targIdx
+                            for curField in fieldOrder:
+                                    targIdx.append(int(idxs[curField])-1)
+                    outline = ""
+                    lineParts = line.split('\t')  #Resplit to fix empty fields
+                    for curTarg in targIdx:
+                            outline = outline + lineParts[curTarg].strip() + '\t'
+                    #Some RSAT files have a contig with ':'s instead of '_'s
+                    outline = outline.replace(':','_')
+                    #Now strip trailing \t
+                    outline = ''.join(outline.rsplit('\t', 1))
+                    outString = outString + outline + '\n'
+        #for feature_name in self.feature_names:
+        
         #To Do: Overwrite cache file & add early check to see if we need the sub
         return outString
 
     def get_feature_names(self, organism):
         """returns the specified organism's feature name file contents"""
         #logging.info('RSAT - get_feature_names(%s)', organism)
-        cache_file = "/".join([self.cache_dir, organism + '_' + self.feature_name + '_names'])
-        rsat_url = "/".join([self.base_url, RsatDatabase.DIR_PATH, organism,
-                             self.feature_names_path])
-        return util.read_url_cached(rsat_url, cache_file)
+        dataList = []
+        for i in range(0,len(self.feature_names)):
+            cache_file = "/".join([self.cache_dir, organism + '_' + self.feature_names[i] + '_names'])
+            rsat_url = "/".join([self.base_url, RsatDatabase.DIR_PATH, organism, self.feature_names_paths[i]])
+            dataList.append(util.read_url_cached(rsat_url, cache_file))
+
+        feature_names = ""
+        for feature_name in dataList:
+                feature_names = feature_names + '-' + feature_name
+
+        return  feature_names
 
     def get_contig_sequence(self, organism, contig):
         """returns the specified contig sequence"""

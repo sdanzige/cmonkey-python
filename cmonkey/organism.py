@@ -142,11 +142,10 @@ class RSATOrganism(OrganismBase):
         is also cached, because it is used many times
         """
         if not self.__synonyms:
-            feature_names_dfile = util.dfile_from_text(
-                self.__rsat_info.get_feature_names(),
+            feature_names_dfile = util.dfile_from_text(self.__rsat_info.get_feature_names(), 
                 comment='--')
-            self.__synonyms = thesaurus.create_from_rsat_feature_names(
-                feature_names_dfile, [thesaurus.strip_vng_modification])
+            self.__synonyms = thesaurus.create_from_rsat_feature_names(feature_names_dfile, 
+                [thesaurus.strip_vng_modification])
         return self.__synonyms
 
     def features_for_genes(self, genes):
