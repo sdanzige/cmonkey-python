@@ -4,11 +4,11 @@ This file is part of cMonkey Python. Please see README and LICENSE for
 more information and licensing details.
 """
 import unittest
-import datamatrix as dm
-import util
-import membership as memb
-import microarray as ma
-import scoring
+import cmonkey.datamatrix as dm
+import cmonkey.util as util
+import cmonkey.membership as memb
+import cmonkey.microarray as ma
+import cmonkey.scoring as scoring
 import numpy
 
 
@@ -37,42 +37,36 @@ class ComputeArrayScoresTest(unittest.TestCase):
                                     'memb.clusters_per_col': 29 })
 
     def __read_ratios(self):
-        dfile = util.read_dfile('testdata/row_scores_testratios.tsv',
-                                has_header=True)
-        return dm.DataMatrixFactory([]).create_from(dfile, case_sensitive=True)
+        return dm.create_from_csv('testdata/row_scores_testratios.tsv', filters=[], case_sensitive=True)
 
     def __read_rowscores_refresult(self):
-        dfile = util.read_dfile('testdata/row_scores_refresult.tsv',
-                                has_header=True, quote='"')
-        return dm.DataMatrixFactory([]).create_from(dfile, case_sensitive=True)
+        return dm.create_from_csv('testdata/row_scores_refresult.tsv', filters=[], case_sensitive=True)
 
     def __read_colscores_refresult(self):
-        dfile = util.read_dfile('testdata/column_scores_refresult.tsv',
-                                has_header=True, quote='"')
-        return dm.DataMatrixFactory([]).create_from(dfile, case_sensitive=True)
+        return dm.create_from_csv('testdata/column_scores_refresult.tsv', filters=[], case_sensitive=True)
 
     def test_compute_row_scores_multiprocessing(self):
         membership = self.__read_members()
         ratios = self.__read_ratios()
-        print "(reading reference row scores...)"
+        print("(reading reference row scores...)")
         refresult = self.__read_rowscores_refresult()
-        print "(compute my own row scores...)"
+        print("(compute my own row scores...)")
         result = ma.compute_row_scores(membership, ratios, 43,
                                        {'multiprocessing': True, 'num_cores': None})
         result.fix_extreme_values()
-        print "(comparing computed with reference results...)"
+        print("(comparing computed with reference results...)")
         self.__compare_with_refresult(refresult, result)
 
     def test_compute_row_scores_single(self):
         membership = self.__read_members()
         ratios = self.__read_ratios()
-        print "(reading reference row scores...)"
+        print("(reading reference row scores...)")
         refresult = self.__read_rowscores_refresult()
-        print "(compute my own row scores...)"
+        print("(compute my own row scores...)")
         result = ma.compute_row_scores(membership, ratios, 43,
                                        {'multiprocessing': True, 'num_cores': None})
         result.fix_extreme_values()
-        print "(comparing computed with reference results...)"
+        print("(comparing computed with reference results...)")
         self.__compare_with_refresult(refresult, result)
 
     def test_compute_column_scores(self):

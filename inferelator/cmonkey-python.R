@@ -30,6 +30,16 @@ cmonkey.organism <- function(db.filename) {
   run.info
 }
 
+cmonkey.motif.pssms<- function(db.filename, cluster) {
+  sqlite <- dbDriver("SQLite")
+  con <- dbConnect(sqlite, dbname=db.filename)
+  maxiter <- dbGetQuery(con, 'select max(iteration) from motif_pssm_rows')[1,]
+  motif.ids <- dbGetPreparedQuery(con, 'select rowid from motif_infos where iteration=:iteration and cluster=:cluster',
+                                  data.frame(iteration=maxiter, cluster=cluster))
+  motif.ids <- unlist(motif.ids)
+  lapply(motif.ids, function(i) { dbGetPreparedQuery(con, 'select a,c,g,t from motif_pssm_rows where motif_info_id=:m_id', data.frame(m_id=i)) })
+}
+
 read.cmonkey.sqlite <- function(db.filename, iteration=0) {
   sqlite <- dbDriver("SQLite")
   con <- dbConnect(sqlite, dbname=db.filename)
@@ -64,7 +74,10 @@ read.cmonkey.sqlite <- function(db.filename, iteration=0) {
     cluster.data$cols <- col.names[col.members]
     cluster.data$k <- cluster
     cluster.data$p.clust <- NULL
-    cluster.data$e.val <- NULL
+    # note: result is a little different than documented above,
+    # currently, there is a row for each sequence type
+    cluster.data$e.val <- dbGetPreparedQuery(con, "select seqtype,motif_num,evalue from motif_infos where iteration = :iteration and cluster = :cluster",
+                                             data.frame(iteration=iteration, cluster=cluster))[1,]
     cluster.data$resid <- cluster.residual
     result[[cluster]] <- cluster.data
   }

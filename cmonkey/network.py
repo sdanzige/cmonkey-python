@@ -6,11 +6,17 @@ more information and licensing details.
 """
 import numpy as np
 import logging
-import util
-import datamatrix as dm
-import scoring
-import cPickle
 import os.path
+
+import cmonkey.util as util
+import cmonkey.datamatrix as dm
+import cmonkey.scoring as scoring
+
+# Python2/Python3 compatibility
+try:
+    xrange
+except NameError:
+    xrange = range
 
 
 class Network:
@@ -37,18 +43,17 @@ class Network:
             self.edges_with_source[edge[1]].append(edge)
 
     def validate(self, synonyms, genes):
-        """Change the names in the network to have the standard names in the 
+        """Change the names in the network to have the standard names in the
             synonyms (elswhere call the thesaurus).  Problem: it does not
             also rename the ratios matrix to the standard names
-        
+
              Keyword arguments:
              synonyms  -- The thesaurus.
              genes     -- The gene names from the ratios.
-            
-             Useage: 
+
+             Usage:
              self.validate(synonyms, genes)
         """
-        
         # remap first
         new_edges = []
         for n0, n1, score in self.edges:
@@ -66,7 +71,7 @@ class Network:
                 if primary == n0 or primary == n1:
                     found.append(primary)
         if len(found) < len(genes) / 2:
-            print edges
+            print(edges)
             raise(Exception("only %d genes found in edges" % len(found)))
 
     def num_edges(self):
@@ -118,7 +123,6 @@ class Network:
         # 2. check gene names that are in the ratios matrix, but not in the network
         # 3. keep the nodes that are in the ratios and are in the thesaurus
         """
-        
         num_nodes_orig = len(nodes)
         if organism:
             thesaurus = organism.thesaurus()
@@ -138,7 +142,7 @@ class Network:
                 key = "%s:%s" % (edge[0], edge[1])
                 key_rev = "%s:%s" % (edge[1], edge[0])
                 if key not in added and key_rev not in added:
-                    network_edges.append((intern(edge[0]), intern(edge[1]), edge[2]))
+                    network_edges.append((edge[0], edge[1], edge[2]))
                 added.add(key)
                 added.add(key_rev)
 
@@ -160,7 +164,7 @@ def compute_network_scores(cluster):
 
     genes = sorted(NETWORK_SCORE_MEMBERSHIP.rows_for_cluster(cluster))
     gene_scores = {}
-    
+
     for gene in genes:
         # TODO: optimization: we can use numpy arrays for the scores array
         # and then sum
@@ -175,7 +179,7 @@ def compute_network_scores(cluster):
                 gene_scores[other_gene].append(edge[2])
 
     final_gene_scores = {}
-    for gene, scores in gene_scores.iteritems():
+    for gene, scores in gene_scores.items():
         final_gene_scores[gene] = sum(scores) / len(genes)
         final_gene_scores[gene] = -np.log(final_gene_scores[gene] + 1)
     return final_gene_scores
@@ -206,14 +210,14 @@ class ScoringFunction(scoring.ScoringFunctionBase):
         """overridden compute for storing additional information"""
         result = scoring.ScoringFunctionBase.compute(self, iteration_result, ref_matrix)
         iteration_result['networks'] = self.score_means
-            
+
         return result
 
     def compute_force(self, iteration_result, ref_matrix=None):
         """overridden compute for storing additional information"""
         result = scoring.ScoringFunctionBase.compute_force(self, iteration_result, ref_matrix)
         iteration_result['networks'] = self.score_means
-        
+
         return result
 
     def networks(self):
@@ -235,8 +239,8 @@ class ScoringFunction(scoring.ScoringFunctionBase):
         if network_scores:
             score_means = {network.name: self.__compute_cluster_score_means(network_scores[network.name])
                            for network in self.networks()}
-            return {network: np.average(np.array(cluster_score_means.values()))
-                    for network, cluster_score_means in score_means.iteritems()}
+            return {network: np.average(np.array(list(cluster_score_means.values())))
+                    for network, cluster_score_means in score_means.items()}
         return {}
 
     def do_compute(self, iteration_result, ref_matrix=None):

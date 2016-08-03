@@ -1,6 +1,5 @@
 # vi: sw=4 ts=4 et:
 """organism.py - organism-specific functionality in cMonkey
-
 This file is part of cMonkey Python. Please see README and LICENSE for
 more information and licensing details.
 """

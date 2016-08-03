@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """quick_tests.py - run all unit tests in the project
 
 This file is part of cMonkey Python. Please see README and LICENSE for
@@ -26,7 +27,6 @@ import sys
 if __name__ == '__main__':
     SUITE = []
     SUITE.append(unittest.TestLoader().loadTestsFromTestCase(dmtest.DataMatrixTest))
-    SUITE.append(unittest.TestLoader().loadTestsFromTestCase(dmtest.DataMatrixFactoryTest))
     SUITE.append(unittest.TestLoader().loadTestsFromTestCase(dmtest.NoChangeFilterTest))
     SUITE.append(unittest.TestLoader().loadTestsFromTestCase(dmtest.CenterScaleFilterTest))
     SUITE.append(unittest.TestLoader().loadTestsFromTestCase(dmtest.QuantileNormalizeTest))
